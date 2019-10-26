@@ -1,0 +1,23 @@
+{
+  "name": "cordova-plugin-inputbar",
+  "version": "0.0.1",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/boboxiaodd/cordova-plugin-inputbar"
+  },
+  "description": "Use InputBarAccessoryView(Swift) for ios",
+  "cordova": {
+    "id": "cordova-plugin-inputbar",
+    "platforms": [
+      "ios"
+    ]
+  },
+  "keywords": [
+    "cordova",
+    "inputbar",
+    "ecosystem:cordova",
+    "cordova-ios"
+  ],
+  "author": "BoBo",
+  "license": "MIT"
+}

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plugin xmlns="http://apache.org/cordova/ns/plugins/1.0"
+        id="cordova-plugin-inputbar"
+        version="0.0.1">
+    <name>CDVInputBar</name>
+
+    <js-module name="CDVInputBar" src="www/CDVInputBar.js">
+        <clobbers target="CDVInputBar" />
+    </js-module>
+
+    <platform name="ios">
+        <config-file target="config.xml" parent="/*">
+
+            <feature name="CDVInputBar">
+                <param name="ios-package" value="CDVInputBar" />
+            </feature>
+
+        </config-file>
+
+        <!-- Add in the plugin .swift files here -->
+        <source-file src="src/ios/CDVInputBar.swift" />
+
+        <!-- Add in the swift-support plugin by default -->
+        <dependency id="cordova-plugin-add-swift-support" version="2.0.2" />
+        <pods-config ios-min-version="9.0" use-frameworks="true" />
+        <pod name="InputBarAccessoryView" version="4.3.1" />
+    </platform>
+</plugin>
