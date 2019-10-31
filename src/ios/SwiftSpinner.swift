@@ -54,7 +54,8 @@ public class SwiftSpinner: UIView {
         outerCircle.lineWidth = 8.0
         outerCircle.strokeStart = 0.0
         outerCircle.strokeEnd = 0.45
-        outerCircle.lineCap = .round
+//        outerCircle.lineCap = .round
+        outerCircle.lineCap = "round"
         outerCircle.fillColor = UIColor.clear.cgColor
         outerCircle.strokeColor = outerCircleDefaultColor
         outerCircleView.layer.addSublayer(outerCircle)
@@ -71,7 +72,7 @@ public class SwiftSpinner: UIView {
         innerCircle.lineWidth = 4.0
         innerCircle.strokeStart = 0.5
         innerCircle.strokeEnd = 0.9
-        innerCircle.lineCap = .round
+        innerCircle.lineCap = "round"
         innerCircle.fillColor = UIColor.clear.cgColor
         innerCircle.strokeColor = innerCircleDefaultColor
         innerCircleView.layer.addSublayer(innerCircle)
@@ -176,7 +177,7 @@ public class SwiftSpinner: UIView {
                 NotificationCenter.default.addObserver(
                     spinner,
                     selector: #selector(SwiftSpinner.updateFrame),
-                    name: UIApplication.didChangeStatusBarOrientationNotification,
+                    name: NSNotification.Name.UIApplicationDidChangeStatusBarOrientation,
                     object: nil)
             #endif
         } else if spinner.dismissing {
@@ -484,7 +485,7 @@ public class SwiftSpinner: UIView {
     @objc public func updateFrame() {
         if let containerView = SwiftSpinner.containerView() {
             SwiftSpinner.shared.frame = containerView.bounds
-            containerView.bringSubviewToFront(SwiftSpinner.shared)
+            containerView.bringSubview(toFront: SwiftSpinner.shared)
         }
     }
 

@@ -30,17 +30,17 @@ internal extension NSNotification {
     
     var event: KeyboardEvent {
         switch self.name {
-        case UIResponder.keyboardWillShowNotification:
+        case NSNotification.Name.UIKeyboardWillShow:
             return .willShow
-        case UIResponder.keyboardDidShowNotification:
+        case NSNotification.Name.UIKeyboardDidShow:
             return .didShow
-        case UIResponder.keyboardWillHideNotification:
+        case NSNotification.Name.UIKeyboardWillHide:
             return .willHide
-        case UIResponder.keyboardDidHideNotification:
+        case NSNotification.Name.UIKeyboardDidHide:
             return .didHide
-        case UIResponder.keyboardWillChangeFrameNotification:
+        case NSNotification.Name.UIKeyboardWillChangeFrame:
             return .willChangeFrame
-        case UIResponder.keyboardDidChangeFrameNotification:
+        case NSNotification.Name.UIKeyboardDidChangeFrame:
             return .didChangeFrame
         default:
             return .unknown
@@ -48,12 +48,12 @@ internal extension NSNotification {
     }
     
     var timeInterval: TimeInterval? {
-        guard let value = userInfo?[UIResponder.keyboardAnimationDurationUserInfoKey] as? NSNumber else { return nil }
+        guard let value = userInfo?[UIKeyboardAnimationDurationUserInfoKey] as? NSNumber else { return nil }
         return TimeInterval(truncating: value)
     }
     
     var animationCurve: UIView.AnimationCurve? {
-        guard let index = (userInfo?[UIResponder.keyboardAnimationCurveUserInfoKey] as? NSNumber)?.intValue else { return nil }
+        guard let index = (userInfo?[UIKeyboardAnimationCurveUserInfoKey] as? NSNumber)?.intValue else { return nil }
         guard index >= 0 && index <= 3 else { return .linear }
         return UIView.AnimationCurve.init(rawValue: index) ?? .linear
     }
@@ -75,15 +75,15 @@ internal extension NSNotification {
     }
     
     var startFrame: CGRect? {
-        return (userInfo?[UIResponder.keyboardFrameBeginUserInfoKey] as? NSValue)?.cgRectValue
+        return (userInfo?[UIKeyboardFrameBeginUserInfoKey] as? NSValue)?.cgRectValue
     }
     
     var endFrame: CGRect? {
-        return (userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? NSValue)?.cgRectValue
+        return (userInfo?[UIKeyboardFrameEndUserInfoKey] as? NSValue)?.cgRectValue
     }
     
     var isForCurrentApp: Bool? {
-        return (userInfo?[UIResponder.keyboardIsLocalUserInfoKey] as? NSNumber)?.boolValue
+        return (userInfo?[UIKeyboardIsLocalUserInfoKey] as? NSNumber)?.boolValue
     }
     
 }
