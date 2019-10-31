@@ -23,6 +23,9 @@
         <header-file src="src/ios/ExtAudioConverter.h" />
         <source-file src="src/ios/ExtAudioConverter.m" />
         <source-file src="src/ios/FDSoundActivatedRecorder.swift" />
+        <source-file src="src/ios/KeyboardEvent.swift" />
+        <source-file src="src/ios/KeyboardNotification.swift" />
+        <source-file src="src/ios/NSNotification+Extensions.swift" />
         <header-file src="src/ios/lame.h" />
         <source-file src="src/ios/SwiftSpinner.swift" />
         <source-file src="src/ios/libmp3lame.a" framework="true" />
