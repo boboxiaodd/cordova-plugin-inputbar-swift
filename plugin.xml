@@ -18,6 +18,15 @@
         </config-file>
 
         <!-- Add in the plugin .swift files here -->
+        <resource-file src="res/ib_call.png" />
+        <resource-file src="res/ib_camera.png" />
+        <resource-file src="res/ib_face.png" />
+        <resource-file src="res/ib_gift.png" />
+        <resource-file src="res/ib_image.png" />
+        <resource-file src="res/ib_keyboard.png" />
+        <resource-file src="res/ib_more.png" />
+        <resource-file src="res/ib_phone.png" />
+        <resource-file src="res/ib_voice.png" />
         <source-file src="src/ios/CDVInputBar.swift" />
         <header-file src="src/ios/AudioConverterKit.h" />
         <header-file src="src/ios/ExtAudioConverter.h" />
