@@ -19,8 +19,16 @@
 
         <!-- Add in the plugin .swift files here -->
         <source-file src="src/ios/CDVInputBar.swift" />
-
+        <header-file src="src/ios/AudioConverterKit.h" />
+        <header-file src="src/ios/ExtAudioConverter.h" />
+        <source-file src="src/ios/ExtAudioConverter.m" />
+        <source-file src="src/ios/FDSoundActivatedRecorder.swift" />
+        <header-file src="src/ios/lame.h" />
+        <source-file src="src/ios/SwiftSpinner.swift" />
+        <source-file src="src/ios/libmp3lame.a" framework="true" />
         <!-- Add in the swift-support plugin by default -->
         <dependency id="cordova-plugin-add-swift-support" version="2.0.2" />
+        <pods-config ios-min-version="11.0" use-frameworks="true" />
+        <pod name="Toast-Swift" spec="~> 5.0.0"/>
     </platform>
 </plugin>
