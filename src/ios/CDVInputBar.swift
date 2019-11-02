@@ -34,6 +34,7 @@ import Toast_Swift
     private var pagenum2:UIView!
     private var MorePanel:UIView!
     private var main_command:CDVInvokedUrlCommand!
+    private var emoji_prefix:String!
 
     override func pluginInitialize() {
         button_count = 0
@@ -44,6 +45,7 @@ import Toast_Swift
         panelShow = false
         emojiShow = false
         moreShow = false
+        emoji_prefix = "/www/img/emoji/emoji-"
         NotificationCenter.default.removeObserver(self.webView!, name: NSNotification.Name.UIKeyboardWillHide, object: nil)
         NotificationCenter.default.removeObserver(self.webView!, name: NSNotification.Name.UIKeyboardWillShow, object: nil)
         NotificationCenter.default.removeObserver(self.webView!, name: NSNotification.Name.UIKeyboardWillChangeFrame, object: nil)
@@ -136,6 +138,9 @@ import Toast_Swift
         }
         main_command = command
         let arg = command.argument(at: 0) as! [AnyHashable : Any]
+        if arg["emoji_prefix"] != nil {
+            emoji_prefix = arg["emoji_prefix"] as? String
+        }
         bottomPadding = UIApplication.shared.keyWindow?.safeAreaInsets.bottom ?? 35.0
         screen  = UIScreen.main.bounds
         inputbar = UIView(frame: CGRect(x: 0,
@@ -599,7 +604,7 @@ import Toast_Swift
         var line = -1
         var page:Double = 0.0
         for i in 1...total {
-            let path = "\(BundleDirectory)/www/img/emoji/emoji-\(i).png"
+            let path = "\(BundleDirectory)\(emoji_prefix!)\(i).png"
             let img = UIImage(contentsOfFile: path)
             if i % (total/2 + 1) == 0 {
                 line = -1
