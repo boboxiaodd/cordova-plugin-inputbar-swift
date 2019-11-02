@@ -254,7 +254,7 @@ import Toast_Swift
                               height: inputbarHeight + bottomPadding)
         inputbar.frame = newFrame
         sendPluginHeight(height: inputbarHeight + bottomPadding)
-
+        sendAction(action: "onKeyboardWillHide")
     }
 
     private func setButtonImage(button:MyButton,image:String){
