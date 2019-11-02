@@ -522,8 +522,8 @@ import Toast_Swift
     @objc func emojiTap(button:UIButton){
         print("emoji \(button.tag) tap")
         let command = (button as! MyButton).command
-        let json = ["action":"send",
-                    "content": "[表情-\(button.tag)]"] as [String:Any]
+        let json = ["action":"emoji",
+                    "index": button.tag] as [String:Any]
         let pluginResult = CDVPluginResult (status: CDVCommandStatus_OK, messageAs: json)
         pluginResult?.setKeepCallbackAs(true)
         self.commandDelegate!.send(pluginResult, callbackId: command?.callbackId)
