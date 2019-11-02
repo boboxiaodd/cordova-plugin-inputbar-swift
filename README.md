@@ -1,4 +1,4 @@
-#Installation
+# Installation
 ```bash
 cordova plugin add https://github.com/boboxiaodd/cordova-plugin-inputbar
 ```
@@ -7,7 +7,7 @@ Edit `Bridging-Header.h` add
 #import "ExtAudioConverter.h"
 ```
 
-#Usage
+# Usage
 ```js
 CDVInputBar.create(function(obj){
         console.log(obj);
@@ -55,12 +55,12 @@ CDVInputBar.show();  //show Inputbar
 CDVInputBar.reset(); //reset Inputbar height
 ```
 
-#Requirements
+# Requirements
 - iOS 11+
 - Xcode 10.2+
 - Swift 5+
 
-#Refer
+# Refer
 
 https://github.com/icanzilb/SwiftSpinner
 
