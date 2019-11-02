@@ -1,13 +1,17 @@
-# Installation
+# 依赖
+`cordova-plugin-cocoapod-support`
+
+# 安装
+
 ```bash
 cordova plugin add https://github.com/boboxiaodd/cordova-plugin-inputbar
 ```
-Edit `Bridging-Header.h` add
+修改 `Bridging-Header.h` 增加
 ```c++
 #import "ExtAudioConverter.h"
 ```
 
-# Usage
+# 使用
 ```js
 CDVInputBar.create(function(obj){
         console.log(obj);
@@ -31,7 +35,7 @@ CDVInputBar.create(function(obj){
          if(obj.action == "onKeyboardDidHide") {}
          if(obj.action == "onKeyboardDidShow") {}
          if(obj.action == "onKeyboardWillShow") {}
-            
+         if(obj.action == "onKeyboardWillHide") {}   
          if(obj.action == "send"){
              console.log("send msg:" + obj.text); //send msg
          }
@@ -40,11 +44,11 @@ CDVInputBar.create(function(obj){
          } 
     },function(err){
         console.log(err);
-    },{"is_chat":true,"emoji_prefix":"/www/images/emoji/emoji-"},
+    },{"is_chat":true,"emoji_prefix":"/www/images/emoji/emoji-"}, //表情至少48个
         [{"title":"Photo","action":"photo","icon":"ib_camera"},
          {"title":"GIft","action":"gift","icon":"ib_gift"},
          {"title":"Video","action":"video","icon":"ib_call"},
-         {"title":"Call","action":"voice","icon":"ib_phone"}]);
+         {"title":"Call","action":"voice","icon":"ib_phone"}]); //图标预定义4个，可自己增加
 
 
 CDVInputBar.play_sound(null,null,{"path":url}); //Play a local auido file
@@ -68,7 +72,7 @@ https://github.com/lixing123/ExtAudioFileConverter
 
 https://github.com/fulldecent/FDSoundActivatedRecorder
 
-#ScreenShot
+# ScreenShot
 
 ![image](https://github.com/boboxiaodd/cordova-plugin-inputbar/blob/master/screenshot/6011572437314_.pic.jpg)
 
