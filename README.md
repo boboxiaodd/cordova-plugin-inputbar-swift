@@ -1,9 +1,11 @@
 [**NOT FILISHED**]
 
-Use library:
-libmp3lame.a
+[Install]
 
-pod 'Toast-Swift', '~> 5.0.0'
+Edit `Bridging-Header.h` add
+```c++
+#import "ExtAudioConverter.h"
+```
 
 Refer to ：
 
