@@ -25,4 +25,7 @@ CDVInputBar.stop_sound = function(onSuccess,onError){
 CDVInputBar.reset = function(onSuccess,onError){
     exec(onSuccess,onError,PLUGIN_NAME,"reset",[]);
 }
+CDVInputBar.show_toast = function(msg,duo){
+    exec(null,null,PLUGIN_NAME,"show_toast",[msg,duo]);
+}
 module.exports = CDVInputBar;
