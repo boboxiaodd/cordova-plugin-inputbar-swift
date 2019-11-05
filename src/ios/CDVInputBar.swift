@@ -3,6 +3,7 @@ import UIKit
 import AVFoundation
 import AudioToolbox
 import Toast_Swift
+import RappleProgressHUD
 
 /*
 * Notes: The @objc shows that this class & function should be exposed to Cordova.
@@ -64,8 +65,8 @@ import Toast_Swift
    @objc(show_toast:)
     func show_toast(command:CDVInvokedUrlCommand){
         let msg = command.argument(at: 0) as! String
-        let duration = command.argument(at: 1) as? Double ?? 2.0
-        self.viewController.view!.makeToast(msg,duration: duration, position: .center)
+        let attributes = RappleActivityIndicatorView.attribute(style: RappleStyle.apple, tintColor: .yellow, screenBG: .purple, progressBG: .black, progressBarBG: .orange, progreeBarFill: .red, thickness: 4)
+        RappleActivityIndicatorView.startAnimatingWithLabel(msg, attributes: attributes)
         let pluginResult = CDVPluginResult (status: CDVCommandStatus_OK, messageAs: "show")
         self.commandDelegate!.send(pluginResult, callbackId: command.callbackId)
     }
