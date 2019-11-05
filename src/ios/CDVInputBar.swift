@@ -63,13 +63,25 @@ import RappleProgressHUD
     }
 
    @objc(show_toast:)
-    func show_toast(command:CDVInvokedUrlCommand){
-        let msg = command.argument(at: 0) as! String
-        let attributes = RappleActivityIndicatorView.attribute(style: RappleStyle.apple, tintColor: .yellow, screenBG: .purple, progressBG: .black, progressBarBG: .orange, progreeBarFill: .red, thickness: 4)
-        RappleActivityIndicatorView.startAnimatingWithLabel(msg, attributes: attributes)
-        let pluginResult = CDVPluginResult (status: CDVCommandStatus_OK, messageAs: "show")
-        self.commandDelegate!.send(pluginResult, callbackId: command.callbackId)
-    }
+       func show_toast(command:CDVInvokedUrlCommand){
+           let msg = command.argument(at: 0) as! String
+       let attributes = RappleActivityIndicatorView.attribute(style: RappleStyle.circle,
+                                                                  tintColor: .white,
+                                                                  screenBG: UIColor.black.withAlphaComponent(0.5),
+                                                                  progressBG: .black,
+                                                                  progressBarBG: .white,
+                                                                  progreeBarFill: .red,
+                                                                  thickness: 4)
+           RappleActivityIndicatorView.startAnimatingWithLabel(msg, attributes: attributes)
+           let pluginResult = CDVPluginResult (status: CDVCommandStatus_OK, messageAs: "show")
+           self.commandDelegate!.send(pluginResult, callbackId: command.callbackId)
+       }
+   @objc(hide_toast:)
+   func hide_toast(command:CDVInvokedUrlCommand){
+       RappleActivityIndicatorView.stopAnimation()
+       let pluginResult = CDVPluginResult (status: CDVCommandStatus_OK, messageAs: "hide")
+       self.commandDelegate!.send(pluginResult, callbackId: command.callbackId)
+   }
 
     @objc(stop_sound:)
     func stop_sound(command:CDVInvokedUrlCommand){

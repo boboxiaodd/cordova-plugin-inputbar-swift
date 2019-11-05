@@ -28,4 +28,7 @@ CDVInputBar.reset = function(onSuccess,onError){
 CDVInputBar.show_toast = function(msg,duo){
     exec(null,null,PLUGIN_NAME,"show_toast",[msg,duo]);
 }
+CDVInputBar.hide_toast = function(){
+    exec(null,null,PLUGIN_NAME,"hide_toast",[]);
+}
 module.exports = CDVInputBar;
