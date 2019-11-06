@@ -47,9 +47,5 @@
         <pods-config ios-min-version="11.0" use-frameworks="true" />
         <pod name="Toast-Swift" spec="~> 5.0.0" />
         <pod name="RappleProgressHUD" spec="~> 4.0.0" />
-        <pod name="XLActionController" spec="~> 5.0.0" />
-        <pod name="XLActionController/Periscope" />
-        <pod name="XLActionController/Skype" />
-        <pod name="XLActionController/Youtube" />
     </platform>
 </plugin>
