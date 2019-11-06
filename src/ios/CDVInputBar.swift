@@ -63,25 +63,25 @@ import RappleProgressHUD
     }
 
    @objc(show_toast:)
-       func show_toast(command:CDVInvokedUrlCommand){
-           let msg = command.argument(at: 0) as! String
-       let attributes = RappleActivityIndicatorView.attribute(style: RappleStyle.circle,
-                                                                  tintColor: .white,
-                                                                  screenBG: UIColor.black.withAlphaComponent(0.5),
-                                                                  progressBG: .black,
-                                                                  progressBarBG: .white,
-                                                                  progreeBarFill: .red,
-                                                                  thickness: 4)
-           RappleActivityIndicatorView.startAnimatingWithLabel(msg, attributes: attributes)
-           let pluginResult = CDVPluginResult (status: CDVCommandStatus_OK, messageAs: "show")
-           self.commandDelegate!.send(pluginResult, callbackId: command.callbackId)
-       }
-   @objc(hide_toast:)
-   func hide_toast(command:CDVInvokedUrlCommand){
-       RappleActivityIndicatorView.stopAnimation()
-       let pluginResult = CDVPluginResult (status: CDVCommandStatus_OK, messageAs: "hide")
-       self.commandDelegate!.send(pluginResult, callbackId: command.callbackId)
-   }
+    func show_toast(command:CDVInvokedUrlCommand){
+        let msg = command.argument(at: 0) as! String
+    let attributes = RappleActivityIndicatorView.attribute(style: RappleStyle.circle,
+                                                               tintColor: .white,
+                                                               screenBG: UIColor.black.withAlphaComponent(0.7),
+                                                               progressBG: .black,
+                                                               progressBarBG: .white,
+                                                               progreeBarFill: .red,
+                                                               thickness: 4)
+        RappleActivityIndicatorView.startAnimatingWithLabel(msg, attributes: attributes)
+        let pluginResult = CDVPluginResult (status: CDVCommandStatus_OK, messageAs: "show")
+        self.commandDelegate!.send(pluginResult, callbackId: command.callbackId)
+    }
+    @objc(hide_toast:)
+    func hide_toast(command:CDVInvokedUrlCommand){
+        RappleActivityIndicatorView.stopAnimation()
+        let pluginResult = CDVPluginResult (status: CDVCommandStatus_OK, messageAs: "hide")
+        self.commandDelegate!.send(pluginResult, callbackId: command.callbackId)
+    }
 
     @objc(stop_sound:)
     func stop_sound(command:CDVInvokedUrlCommand){
@@ -256,27 +256,31 @@ import RappleProgressHUD
         sendAction(action: "onKeyboardDidShow")
     }
     @objc func onKeyboardWillShow(notification: NSNotification) {
-        guard let keyboardNotification = KeyboardNotification(from: notification) else { return }
-        let newFrame = CGRect(x: 0,
-                              y: screen.height - inputbarHeight - keyboardNotification.endFrame.height,
-                              width: screen.width,
-                              height: inputbarHeight)
-        inputbar.frame = newFrame
-        //隐藏表情
-        self.hideEmoji()
-        self.hideMore()
-        self.panelShow = false
-        sendPluginHeight(height: keyboardNotification.endFrame.height + inputbarHeight!)
-        sendAction(action: "onKeyboardWillShow")
+        if (inputbar != nil) {
+            guard let keyboardNotification = KeyboardNotification(from: notification) else { return }
+            let newFrame = CGRect(x: 0,
+                                  y: screen.height - inputbarHeight - keyboardNotification.endFrame.height,
+                                  width: screen.width,
+                                  height: inputbarHeight)
+            inputbar.frame = newFrame
+            //隐藏表情
+            self.hideEmoji()
+            self.hideMore()
+            self.panelShow = false
+            sendPluginHeight(height: keyboardNotification.endFrame.height + inputbarHeight!)
+            sendAction(action: "onKeyboardWillShow")
+        }
     }
     @objc func onKeyboardWillHide(notification: NSNotification) {
-        let newFrame = CGRect(x: 0,
-                              y: screen.height - ( bottomPadding + inputbarHeight),
-                              width: screen.width,
-                              height: inputbarHeight + bottomPadding)
-        inputbar.frame = newFrame
-        sendPluginHeight(height: inputbarHeight + bottomPadding)
-        sendAction(action: "onKeyboardWillHide")
+        if inputbar != nil {
+            let newFrame = CGRect(x: 0,
+                                  y: screen.height - ( bottomPadding + inputbarHeight),
+                                  width: screen.width,
+                                  height: inputbarHeight + bottomPadding)
+            inputbar.frame = newFrame
+            sendPluginHeight(height: inputbarHeight + bottomPadding)
+            sendAction(action: "onKeyboardWillHide")
+        }
     }
 
     private func setButtonImage(button:MyButton,image:String){
