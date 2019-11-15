@@ -25,7 +25,7 @@ import RappleProgressHUD
     private var audioFilename:URL?
     private var start_time: Int64?
     private var not_delect_sound:Bool?
-    private var SoundEffect: AVAudioPlayer?
+    private var SoundEffect: AVAudioPlayer!
     private var panelHeight:CGFloat?
     private var panelShow:Bool!
     private var emojiShow:Bool!
@@ -35,7 +35,9 @@ import RappleProgressHUD
     private var pagenum2:UIView!
     private var MorePanel:UIView!
     private var main_command:CDVInvokedUrlCommand!
+    private var sound_command:CDVInvokedUrlCommand!
     private var emoji_prefix:String!
+    private var is_chat:Bool!
 
     override func pluginInitialize() {
         button_count = 0
@@ -43,9 +45,7 @@ import RappleProgressHUD
         inputbarHeight = 46.0
         start_time = 0
         padding = 8
-        panelShow = false
-        emojiShow = false
-        moreShow = false
+        is_chat = true
         emoji_prefix = "/www/img/emoji/emoji-"
         NotificationCenter.default.removeObserver(self.webView!, name: NSNotification.Name.UIKeyboardWillHide, object: nil)
         NotificationCenter.default.removeObserver(self.webView!, name: NSNotification.Name.UIKeyboardWillShow, object: nil)
@@ -55,11 +55,6 @@ import RappleProgressHUD
         NotificationCenter.default.addObserver(self, selector: #selector(onKeyboardDidHide), name: NSNotification.Name.UIKeyboardDidHide, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(onKeyboardWillShow), name: NSNotification.Name.UIKeyboardWillShow, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(onKeyboardDidShow), name: NSNotification.Name.UIKeyboardDidShow, object: nil)
-    }
-    //AVAudioPlayerDelegate
-    func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
-        sendAction(action: "playend")
-        SoundEffect = nil
     }
 
    @objc(show_toast:)
@@ -83,6 +78,17 @@ import RappleProgressHUD
         self.commandDelegate!.send(pluginResult, callbackId: command.callbackId)
     }
 
+    //AVAudioPlayerDelegate
+    func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
+        if sound_command != nil {
+            let json = ["action":"play_end"] as [String:Any]
+            let pluginResult = CDVPluginResult (status: CDVCommandStatus_OK, messageAs: json)
+            pluginResult?.setKeepCallbackAs(true)
+            self.commandDelegate!.send(pluginResult, callbackId: sound_command.callbackId)
+            SoundEffect = nil
+        }
+    }
+
     @objc(stop_sound:)
     func stop_sound(command:CDVInvokedUrlCommand){
         if SoundEffect != nil {
@@ -91,23 +97,39 @@ import RappleProgressHUD
         }
     }
 
-    @objc(play_sound:)
-    func play_sound(command: CDVInvokedUrlCommand){
-        if SoundEffect != nil {
-            SoundEffect?.stop()
-            SoundEffect = nil
-        }
-        let arg = command.argument(at: 0) as! [AnyHashable : Any]
-        let url = URL(fileURLWithPath: arg["path"] as! String)
-        do {
+    func playSound(url:URL){
+        do{
+            let audioSession = AVAudioSession()
+            try! audioSession.setCategory(AVAudioSessionCategoryPlayback)
             SoundEffect = try AVAudioPlayer(contentsOf: url)
             SoundEffect?.volume = 10.0
             SoundEffect?.delegate = self
             SoundEffect?.play()
-        } catch {
-            // couldn't load file :(
+            let json = ["action":"play_start"] as [String:Any]
+            let pluginResult = CDVPluginResult (status: CDVCommandStatus_OK, messageAs: json)
+            pluginResult?.setKeepCallbackAs(true)
+            self.commandDelegate!.send(pluginResult, callbackId: sound_command.callbackId)
+        }catch{
+            print("play fail")
         }
-        let pluginResult = CDVPluginResult (status: CDVCommandStatus_OK, messageAs: "play success")
+    }
+
+    @objc(play_sound:)
+    func play_sound(command: CDVInvokedUrlCommand){
+        sound_command = command
+        if SoundEffect != nil {
+            SoundEffect.stop()
+            SoundEffect = nil
+        }
+        let arg = command.argument(at: 0) as! [AnyHashable : Any]
+        let url = URL(string: arg["path"] as! String)
+        var downloadTask:URLSessionDownloadTask
+        downloadTask = URLSession.shared.downloadTask(with: url!){ URL, response, error  in
+            self.playSound(url: URL!)
+        }
+        downloadTask.resume()
+        let json = ["action":"play_prepare"] as [String:Any]
+        let pluginResult = CDVPluginResult (status: CDVCommandStatus_OK, messageAs: json)
         pluginResult?.setKeepCallbackAs(true)
         self.commandDelegate!.send(pluginResult, callbackId: command.callbackId)
     }
@@ -118,7 +140,7 @@ import RappleProgressHUD
             inputbar.isHidden = true
             sendPluginHeight(height: 0)
         }
-        self.webView.frame = CGRect(x: 0, y: 0, width: screen.width, height: screen.height);
+//        self.webView.frame = CGRect(x: 0, y: 0, width: screen.width, height: screen.height);
     }
     @objc(show:)
     func show(command: CDVInvokedUrlCommand){
@@ -126,7 +148,7 @@ import RappleProgressHUD
             inputbar.isHidden = false
             sendPluginHeight(height: inputbarHeight + bottomPadding)
         }
-        self.webView.frame = CGRect(x: 0, y: 0, width: screen.width, height: screen.height - (inputbarHeight + bottomPadding));
+//        self.webView.frame = CGRect(x: 0, y: 0, width: screen.width, height: screen.height - (inputbarHeight + bottomPadding));
     }
 
     @objc(close:)
@@ -134,15 +156,13 @@ import RappleProgressHUD
         if inputbar != nil {
             textfield.removeFromSuperview()
             textfield = nil
-            borderView.removeFromSuperview()
-            borderView = nil
             inputbar.removeFromSuperview()
             inputbar = nil
         }
         sendPluginHeight(height: 0)
         let pluginResult = CDVPluginResult (status: CDVCommandStatus_OK, messageAs: "inputbar close")
         self.commandDelegate!.send(pluginResult, callbackId: command.callbackId)
-        self.webView.frame = CGRect(x: 0, y: 0, width: screen.width, height: screen.height);
+//        self.webView.frame = CGRect(x: 0, y: 0, width: screen.width, height: screen.height);
     }
 
 
@@ -155,6 +175,9 @@ import RappleProgressHUD
 
     @objc(create:) // Declare your function name.
     func create(command: CDVInvokedUrlCommand) { // write the function code.
+        panelShow = false
+        emojiShow = false
+        moreShow = false
         if (inputbar != nil) {
             return
         }
@@ -174,7 +197,7 @@ import RappleProgressHUD
         inputbar.addSubview(borderView)
         inputbar.backgroundColor =  UIColor(hex: arg["bgcolor"] as? String ?? "#f7f7f8ff")
 
-        let is_chat =  arg["is_chat"] as? Bool ?? true
+        is_chat =  arg["is_chat"] as? Bool ?? true
         var textfield_width = screen.width
 
         if is_chat {
@@ -214,11 +237,11 @@ import RappleProgressHUD
                                                     height: Int(tf_panel.frame.height)),command: command)
             initFacePanel(total: 48,command: command)
             initMorePanel(command:command)
-
+            textfield.returnKeyType = .send
         }else{
-            tf_panel = UIView(frame: CGRect(x: 0 ,
+            tf_panel = UIView(frame: CGRect(x: 10 ,
                                                 y: padding,
-                                                width: Int(textfield_width),
+                                                width: Int(textfield_width) - 20,
                                                 height: button_width))
             tf_panel.backgroundColor = UIColor.white
             tf_panel.layer.cornerRadius = 5
@@ -227,6 +250,11 @@ import RappleProgressHUD
                                                     y: 0,
                                                     width: Int(tf_panel.frame.width) - 10,
                                                     height: Int(tf_panel.frame.height)),command: command)
+            if arg["focus"] as? Bool ?? true {
+                textfield.returnKeyType = .done
+            }else{
+                textfield.returnKeyType = .send
+            }
         }
         textfield.delegate = self
         textfield.keyboardAppearance = .light
@@ -234,17 +262,22 @@ import RappleProgressHUD
         textfield.attributedPlaceholder = NSAttributedString(
             string: arg["placeholder"] as? String ?? "输入聊天内容",
             attributes: [NSAttributedString.Key.foregroundColor: UIColor.gray])
-        textfield.returnKeyType = .send
+        textfield.text = arg["text"] as? String ?? ""
 
         tf_panel.addSubview(textfield)
 
 
         self.viewController.view.addSubview(inputbar);
 
-        let pluginResult = CDVPluginResult (status: CDVCommandStatus_OK, messageAs: "inputbar show")
+        if !is_chat && (arg["focus"] as? Bool ?? true) {
+            textfield.becomeFirstResponder()
+        }
+//        self.webView.frame = CGRect(x: 0, y: 0, width: screen.width, height: screen.height - (inputbarHeight + bottomPadding));
+//        sendAction(action: "inputbarShow")
+        let json = ["action":"inputbarShow","height": inputbarHeight + bottomPadding ] as [String:Any]
+        let pluginResult = CDVPluginResult (status: CDVCommandStatus_OK, messageAs: json)
         pluginResult?.setKeepCallbackAs(true)
         self.commandDelegate!.send(pluginResult, callbackId: command.callbackId)
-        self.webView.frame = CGRect(x: 0, y: 0, width: screen.width, height: screen.height - (inputbarHeight + bottomPadding));
     }
 
 
@@ -268,6 +301,7 @@ import RappleProgressHUD
             self.hideMore()
             self.panelShow = false
             sendPluginHeight(height: keyboardNotification.endFrame.height + inputbarHeight!)
+//            sendPluginHeight(height: keyboardNotification.endFrame.height)
             sendAction(action: "onKeyboardWillShow")
         }
     }
@@ -279,6 +313,7 @@ import RappleProgressHUD
                                   height: inputbarHeight + bottomPadding)
             inputbar.frame = newFrame
             sendPluginHeight(height: inputbarHeight + bottomPadding)
+//            sendPluginHeight(height: 0)
             sendAction(action: "onKeyboardWillHide")
         }
     }
@@ -328,10 +363,10 @@ import RappleProgressHUD
             let pluginResult = CDVPluginResult (status: CDVCommandStatus_OK, messageAs: json)
             pluginResult?.setKeepCallbackAs(true)
             self.commandDelegate!.send(pluginResult, callbackId: main_command.callbackId)
-            self.webView.frame = CGRect(x: 0,
-                                        y: 0,
-                                        width: screen.width,
-                                        height: screen.height - height);
+//            self.webView.frame = CGRect(x: 0,
+//                                        y: 0,
+//                                        width: screen.width,
+//                                        height: screen.height - height);
         }
     }
 
@@ -340,6 +375,7 @@ import RappleProgressHUD
             hideEmoji()
             hideMore()
             sendPluginHeight(height: inputbarHeight! + bottomPadding!)
+//            sendPluginHeight(height: 0)
             UIView.animate(withDuration: 0.1, delay: 0, options: .curveEaseOut, animations: {
                 self.inputbar.frame = CGRect(x: 0,
                                              y: self.screen.height - (self.bottomPadding + self.inputbarHeight),
@@ -353,6 +389,7 @@ import RappleProgressHUD
     func showPanel(){
         if !panelShow {
             sendPluginHeight(height: inputbarHeight! + bottomPadding! + panelHeight!)
+//            sendPluginHeight(height: inputbarHeight! + panelHeight!)
             UIView.animate(withDuration: 0.2, delay: 0, options: .curveEaseOut, animations: {
                 self.inputbar.frame = CGRect(x: 0,
                                              y: self.screen.height - (self.bottomPadding + self.inputbarHeight) - self.panelHeight!,
@@ -366,21 +403,21 @@ import RappleProgressHUD
 
     func showEmoji(){
         textfield.resignFirstResponder()
-        EmojiPanel.isHidden = false
-        pagenum1.isHidden = false
-        pagenum2.isHidden = false
+        EmojiPanel?.isHidden = false
+        pagenum1?.isHidden = false
+        pagenum2?.isHidden = false
     }
     func hideEmoji(){
-        EmojiPanel.isHidden = true
-        pagenum1.isHidden = true
-        pagenum2.isHidden = true
+        EmojiPanel?.isHidden = true
+        pagenum1?.isHidden = true
+        pagenum2?.isHidden = true
     }
     func showMore(){
         textfield.resignFirstResponder()
-        MorePanel.isHidden = false
+        MorePanel?.isHidden = false
     }
     func hideMore(){
-        MorePanel.isHidden = true
+        MorePanel?.isHidden = true
     }
 
     @objc func faceTap(_ button:MyButton){
@@ -409,6 +446,7 @@ import RappleProgressHUD
     }
 
     func soundActivatedRecorderDidAbort(_ recorder: FDSoundActivatedRecorder) {
+        SwiftSpinner.hide()
         print("soundActivatedRecorderDidAbort")
     }
     func soundActivatedRecorderDidTimeOut(_ recorder: FDSoundActivatedRecorder) {
@@ -448,13 +486,6 @@ import RappleProgressHUD
                         "size": audioInfo.fileSize ?? 0,
                         "duration": Double(diff) / 1000.0 ] as [String : Any]
             let pluginResult = CDVPluginResult (status: CDVCommandStatus_OK, messageAs: json)
-//            do {
-//                SoundEffect = try AVAudioPlayer(contentsOf: mp3Url)
-//                SoundEffect?.volume = 10.0
-//                SoundEffect?.play()
-//            } catch {
-//                // couldn't load file :(
-//            }
             pluginResult?.setKeepCallbackAs(true)
             self.commandDelegate!.send(pluginResult, callbackId: (recorder as! FDSoundActivatedRecorderMock).command?.callbackId)
         }
@@ -483,16 +514,14 @@ import RappleProgressHUD
         start_time = 0
         audioRecorder = FDSoundActivatedRecorderMock(command: button.command!)
         audioRecorder?.delegate = self
+        audioRecorder?.timeoutSeconds = 120.0
         audioRecorder?.intervalCallback = {currentLevel in self.drawSample(currentLevel: currentLevel)}
-//        audioRecorder?.microphoneLevelSilenceThreshold = -60
-        audioRecorder?.delegate = self
 
         let audioSession = AVAudioSession.sharedInstance()
         _ = try? audioSession.setCategory(AVAudioSessionCategoryPlayAndRecord)
         _ = try? audioSession.setActive(true)
-
         audioRecorder?.startListening()
-        SwiftSpinner.show("正在检测声音").addTapHandler({}, subtitle: "松开结束，上滑取消，最多可录制30秒")
+        SwiftSpinner.show("正在检测声音").addTapHandler({}, subtitle: "松开结束，上滑取消")
     }
     @objc func record_end(_ button:MyButton){
         if start_time == 0 {
@@ -503,15 +532,13 @@ import RappleProgressHUD
         }
         audioRecorder?.stopAndSaveRecording()
         SwiftSpinner.hide()
-        self.viewController.view!.makeToast("录制完成",position: .center)
+//        self.viewController.view!.makeToast("录制完成",position: .center)
     }
     @objc func record_cancel(_ button:MyButton){
         audioRecorder!.abort()
         self.viewController.view!.makeToast("录制取消",position: .center)
         SwiftSpinner.hide()
     }
-
-
 
     @objc func leftSwipe(){
         print("leftSwipe")
