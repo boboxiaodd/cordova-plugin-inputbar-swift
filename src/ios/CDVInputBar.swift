@@ -38,6 +38,7 @@ import RappleProgressHUD
     private var sound_command:CDVInvokedUrlCommand!
     private var emoji_prefix:String!
     private var is_chat:Bool!
+    private var backdropView:UIView?
 
     override func pluginInitialize() {
         button_count = 0
@@ -55,6 +56,18 @@ import RappleProgressHUD
         NotificationCenter.default.addObserver(self, selector: #selector(onKeyboardDidHide), name: NSNotification.Name.UIKeyboardDidHide, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(onKeyboardWillShow), name: NSNotification.Name.UIKeyboardWillShow, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(onKeyboardDidShow), name: NSNotification.Name.UIKeyboardDidShow, object: nil)
+    }
+
+    @objc(show_loadding:)
+    func show_loadding(command:CDVInvokedUrlCommand){
+        let title = command.argument(at: 0) as! String
+        let subtitle = command.argument(at:1) as? String
+        SwiftSpinner.show(title).addTapHandler({}, subtitle: subtitle ?? "正在初始化页面")
+    }
+
+    @objc(hide_loadding:)
+    func hide_loadding(command:CDVInvokedUrlCommand){
+        SwiftSpinner.hide();
     }
 
    @objc(show_toast:)
@@ -140,7 +153,6 @@ import RappleProgressHUD
             inputbar.isHidden = true
             sendPluginHeight(height: 0)
         }
-//        self.webView.frame = CGRect(x: 0, y: 0, width: screen.width, height: screen.height);
     }
     @objc(show:)
     func show(command: CDVInvokedUrlCommand){
@@ -148,21 +160,36 @@ import RappleProgressHUD
             inputbar.isHidden = false
             sendPluginHeight(height: inputbarHeight + bottomPadding)
         }
-//        self.webView.frame = CGRect(x: 0, y: 0, width: screen.width, height: screen.height - (inputbarHeight + bottomPadding));
+    }
+
+    func removeInputbar(command:CDVInvokedUrlCommand){
+        if self.inputbar != nil {
+            self.textfield.removeFromSuperview()
+            self.textfield = nil
+            self.inputbar.removeFromSuperview()
+            self.inputbar = nil
+        }
+        self.sendPluginHeight(height: 0)
+        let pluginResult = CDVPluginResult (status: CDVCommandStatus_OK, messageAs: "inputbar close")
+        self.commandDelegate!.send(pluginResult, callbackId: command.callbackId)
     }
 
     @objc(close:)
     func close(command: CDVInvokedUrlCommand) { // write the function code
-        if inputbar != nil {
-            textfield.removeFromSuperview()
-            textfield = nil
-            inputbar.removeFromSuperview()
-            inputbar = nil
+        if self.inputbar == nil { return }
+        if is_chat {
+            UIView.animate(withDuration: 0.3, delay: 0, options: .curveEaseOut, animations: {
+                self.inputbar.frame = CGRect(x: 0,
+                                             y: self.screen.height,
+                                             width: self.screen.width,
+                                             height: self.inputbarHeight + self.bottomPadding)
+            }, completion:{ _ in
+                self.removeInputbar(command: command)
+            })
+        }else{
+            backdropView?.removeFromSuperview()
+            removeInputbar(command: command)
         }
-        sendPluginHeight(height: 0)
-        let pluginResult = CDVPluginResult (status: CDVCommandStatus_OK, messageAs: "inputbar close")
-        self.commandDelegate!.send(pluginResult, callbackId: command.callbackId)
-//        self.webView.frame = CGRect(x: 0, y: 0, width: screen.width, height: screen.height);
     }
 
 
@@ -172,6 +199,9 @@ import RappleProgressHUD
         hidePanel()
     }
 
+    @objc func backdropTap(recognizer: UITapGestureRecognizer){
+        self.close(command: main_command)
+    }
 
     @objc(create:) // Declare your function name.
     func create(command: CDVInvokedUrlCommand) { // write the function code.
@@ -188,16 +218,25 @@ import RappleProgressHUD
         }
         bottomPadding = UIApplication.shared.keyWindow?.safeAreaInsets.bottom ?? 35.0
         screen  = UIScreen.main.bounds
+        is_chat =  arg["is_chat"] as? Bool ?? true
+        let is_focus = arg["focus"] as? Bool ?? true
+        if !is_chat && is_focus { //显示backdrop view
+            backdropView = UIView(frame: CGRect(x: 0, y: 0, width: Int(screen.width), height: Int(screen.height)))
+            backdropView?.backgroundColor = UIColor(red: 0.0, green: 0.0, blue: 0.0, alpha: 0.5)
+            backdropView?.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(backdropTap)))
+            self.viewController.view.addSubview(backdropView!)
+        }
+
         inputbar = UIView(frame: CGRect(x: 0,
-                                                  y: screen.height - (bottomPadding + inputbarHeight),
-                                                  width: screen.width,
-                                                  height: inputbarHeight + bottomPadding));
+                                        y: is_chat ? screen.height :  screen.height - (bottomPadding + inputbarHeight),
+                                    width: screen.width,
+                                   height: inputbarHeight + bottomPadding));
         borderView = UIView(frame: CGRect(x: 0,y: 0,width: screen.width,height: 1))
         borderView.backgroundColor = UIColor(hex: "#eeeeeeff")
         inputbar.addSubview(borderView)
         inputbar.backgroundColor =  UIColor(hex: arg["bgcolor"] as? String ?? "#f7f7f8ff")
 
-        is_chat =  arg["is_chat"] as? Bool ?? true
+
         var textfield_width = screen.width
 
         if is_chat {
@@ -250,7 +289,7 @@ import RappleProgressHUD
                                                     y: 0,
                                                     width: Int(tf_panel.frame.width) - 10,
                                                     height: Int(tf_panel.frame.height)),command: command)
-            if arg["focus"] as? Bool ?? true {
+            if is_focus {
                 textfield.returnKeyType = .done
             }else{
                 textfield.returnKeyType = .send
@@ -268,12 +307,18 @@ import RappleProgressHUD
 
 
         self.viewController.view.addSubview(inputbar);
-
-        if !is_chat && (arg["focus"] as? Bool ?? true) {
+        if is_chat {
+            //动画显示
+            UIView.animate(withDuration: 0.3, delay: 0, options: .curveEaseOut, animations: {
+                self.inputbar.frame = CGRect(x: 0,
+                                             y: self.screen.height - (self.bottomPadding + self.inputbarHeight),
+                                             width: self.screen.width,
+                                             height: self.inputbarHeight + self.bottomPadding)
+            }, completion: nil)
+        }
+        if !is_chat && is_focus {
             textfield.becomeFirstResponder()
         }
-//        self.webView.frame = CGRect(x: 0, y: 0, width: screen.width, height: screen.height - (inputbarHeight + bottomPadding));
-//        sendAction(action: "inputbarShow")
         let json = ["action":"inputbarShow","height": inputbarHeight + bottomPadding ] as [String:Any]
         let pluginResult = CDVPluginResult (status: CDVCommandStatus_OK, messageAs: json)
         pluginResult?.setKeepCallbackAs(true)
@@ -301,7 +346,6 @@ import RappleProgressHUD
             self.hideMore()
             self.panelShow = false
             sendPluginHeight(height: keyboardNotification.endFrame.height + inputbarHeight!)
-//            sendPluginHeight(height: keyboardNotification.endFrame.height)
             sendAction(action: "onKeyboardWillShow")
         }
     }
@@ -313,7 +357,6 @@ import RappleProgressHUD
                                   height: inputbarHeight + bottomPadding)
             inputbar.frame = newFrame
             sendPluginHeight(height: inputbarHeight + bottomPadding)
-//            sendPluginHeight(height: 0)
             sendAction(action: "onKeyboardWillHide")
         }
     }
@@ -363,10 +406,6 @@ import RappleProgressHUD
             let pluginResult = CDVPluginResult (status: CDVCommandStatus_OK, messageAs: json)
             pluginResult?.setKeepCallbackAs(true)
             self.commandDelegate!.send(pluginResult, callbackId: main_command.callbackId)
-//            self.webView.frame = CGRect(x: 0,
-//                                        y: 0,
-//                                        width: screen.width,
-//                                        height: screen.height - height);
         }
     }
 
@@ -375,7 +414,6 @@ import RappleProgressHUD
             hideEmoji()
             hideMore()
             sendPluginHeight(height: inputbarHeight! + bottomPadding!)
-//            sendPluginHeight(height: 0)
             UIView.animate(withDuration: 0.1, delay: 0, options: .curveEaseOut, animations: {
                 self.inputbar.frame = CGRect(x: 0,
                                              y: self.screen.height - (self.bottomPadding + self.inputbarHeight),
@@ -389,7 +427,6 @@ import RappleProgressHUD
     func showPanel(){
         if !panelShow {
             sendPluginHeight(height: inputbarHeight! + bottomPadding! + panelHeight!)
-//            sendPluginHeight(height: inputbarHeight! + panelHeight!)
             UIView.animate(withDuration: 0.2, delay: 0, options: .curveEaseOut, animations: {
                 self.inputbar.frame = CGRect(x: 0,
                                              y: self.screen.height - (self.bottomPadding + self.inputbarHeight) - self.panelHeight!,
@@ -406,18 +443,22 @@ import RappleProgressHUD
         EmojiPanel?.isHidden = false
         pagenum1?.isHidden = false
         pagenum2?.isHidden = false
+        emojiShow = true
     }
     func hideEmoji(){
         EmojiPanel?.isHidden = true
         pagenum1?.isHidden = true
         pagenum2?.isHidden = true
+        emojiShow = false
     }
     func showMore(){
         textfield.resignFirstResponder()
         MorePanel?.isHidden = false
+        moreShow = true
     }
     func hideMore(){
         MorePanel?.isHidden = true
+        moreShow = false
     }
 
     @objc func faceTap(_ button:MyButton){
@@ -532,7 +573,6 @@ import RappleProgressHUD
         }
         audioRecorder?.stopAndSaveRecording()
         SwiftSpinner.hide()
-//        self.viewController.view!.makeToast("录制完成",position: .center)
     }
     @objc func record_cancel(_ button:MyButton){
         audioRecorder!.abort()
