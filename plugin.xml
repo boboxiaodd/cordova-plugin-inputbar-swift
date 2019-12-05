@@ -17,9 +17,6 @@
             </feature>
 
         </config-file>
-        <edit-config file="*-Info.plist" mode="merge" target="NSMicrophoneUsageDescription">
-            <string>使用麦克风录制语音消息</string>
-        </edit-config>
 
         <!-- Add in the plugin .swift files here -->
         <resource-file src="res/ib_call.png" />
