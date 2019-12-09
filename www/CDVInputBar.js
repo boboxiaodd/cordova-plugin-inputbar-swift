@@ -1,4 +1,3 @@
-cordova.define("cordova-plugin-inputbar.CDVInputBar", function(require, exports, module) {
     var exec = require('cordova/exec');
 
     var PLUGIN_NAME = "CDVInputBar"; // This is just for code completion uses.
@@ -39,5 +38,3 @@ cordova.define("cordova-plugin-inputbar.CDVInputBar", function(require, exports,
         exec(null,null,PLUGIN_NAME,"hide_loadding",[]);
     }
     module.exports = CDVInputBar;
-
-});
