@@ -20,9 +20,11 @@ import RappleProgressHUD
     private var button_width:Int!
     private var voice_button: MyButton?
     private var voice_icon: MyButton?
+    private var keyboard_icon: MyButton?
     private var padding:Int!
     private var audioRecorder:FDSoundActivatedRecorderMock?
     private var audioFilename:URL?
+    private var is_recording:Bool = false
     private var start_time: Int64?
     private var not_delect_sound:Bool?
     private var SoundEffect: AVAudioPlayer!
@@ -39,15 +41,16 @@ import RappleProgressHUD
     private var emoji_prefix:String!
     private var is_chat:Bool!
     private var backdropView:UIView?
+    private var color_theme:String = "dark"
 
     override func pluginInitialize() {
         button_count = 0
-        button_width = 30
+        button_width = 32
         inputbarHeight = 46.0
         start_time = 0
         padding = 8
         is_chat = true
-        emoji_prefix = "/www/img/emoji/emoji-"
+        emoji_prefix = "/www/images/new-emoji/"
         NotificationCenter.default.removeObserver(self.webView!, name: NSNotification.Name.UIKeyboardWillHide, object: nil)
         NotificationCenter.default.removeObserver(self.webView!, name: NSNotification.Name.UIKeyboardWillShow, object: nil)
         NotificationCenter.default.removeObserver(self.webView!, name: NSNotification.Name.UIKeyboardWillChangeFrame, object: nil)
@@ -61,19 +64,39 @@ import RappleProgressHUD
     @objc(show_loadding:)
     func show_loadding(command:CDVInvokedUrlCommand){
         let title = command.argument(at: 0) as! String
-        let subtitle = command.argument(at:1) as? String
-        SwiftSpinner.show(title).addTapHandler({}, subtitle: subtitle ?? "正在初始化页面")
+        //let subtitle = command.argument(at:1) as? String
+//        let attributes = RappleActivityIndicatorView.attribute(style: RappleStyle.circle,
+//                                                                        tintColor: .white,
+//                                                                        screenBG: UIColor.black.withAlphaComponent(0.7))
+        RappleActivityIndicatorView.startAnimatingWithLabel(title,attributes: RappleAppleAttributes)
+//        SwiftSpinner.show(title).addTapHandler({}, subtitle: subtitle ?? "正在初始化页面")
     }
 
     @objc(hide_loadding:)
     func hide_loadding(command:CDVInvokedUrlCommand){
-        SwiftSpinner.hide();
+//        SwiftSpinner.hide();
+        RappleActivityIndicatorView.stopAnimation(completionIndicator: .success, completionLabel: "完成", completionTimeout: 1.0)
+    }
+
+    @objc(get:)
+    func version(command: CDVInvokedUrlCommand){
+        let infoDic = Bundle.main.infoDictionary
+        let appVersion = infoDic?["CFBundleShortVersionString"]
+        let appBuildVersion = infoDic?["CFBundleVersion"]
+        let appName = infoDic?["CFBundleDisplayName"]
+        let bundle_id = infoDic?["CFBundleIdentifier"]
+        let json = ["version": appVersion! ,
+                    "build": appBuildVersion! ,
+                    "bundle_id": bundle_id!,
+                    "appname": appName! ] as [String:Any]
+        let pluginResult = CDVPluginResult (status: CDVCommandStatus_OK, messageAs: json)
+        self.commandDelegate!.send(pluginResult, callbackId: command.callbackId)
     }
 
    @objc(show_toast:)
     func show_toast(command:CDVInvokedUrlCommand){
         let msg = command.argument(at: 0) as! String
-    let attributes = RappleActivityIndicatorView.attribute(style: RappleStyle.circle,
+    let attributes = RappleActivityIndicatorView.attribute(style: RappleStyle.apple,
                                                                tintColor: .white,
                                                                screenBG: UIColor.black.withAlphaComponent(0.7),
                                                                progressBG: .black,
@@ -152,6 +175,7 @@ import RappleProgressHUD
         if inputbar != nil {
             inputbar.isHidden = true
             sendPluginHeight(height: 0)
+            stop_record()
         }
     }
     @objc(show:)
@@ -185,6 +209,7 @@ import RappleProgressHUD
                                              height: self.inputbarHeight + self.bottomPadding)
             }, completion:{ _ in
                 self.removeInputbar(command: command)
+                self.stop_record()
             })
         }else{
             backdropView?.removeFromSuperview()
@@ -192,11 +217,13 @@ import RappleProgressHUD
         }
     }
 
-
     @objc(reset:)
     func reset(command: CDVInvokedUrlCommand) {
         print("reset inputbar")
-        hidePanel()
+        if textfield != nil {
+            textfield.resignFirstResponder()
+            hidePanel()
+        }
     }
 
     @objc func backdropTap(recognizer: UITapGestureRecognizer){
@@ -211,10 +238,13 @@ import RappleProgressHUD
         if (inputbar != nil) {
             return
         }
+
         main_command = command
         let arg = command.argument(at: 0) as! [AnyHashable : Any]
-        if arg["emoji_prefix"] != nil {
-            emoji_prefix = arg["emoji_prefix"] as? String
+        if arg["theme"] != nil {
+            color_theme = arg["theme"] as! String
+        }else{
+            color_theme = "light"
         }
         bottomPadding = UIApplication.shared.keyWindow?.safeAreaInsets.bottom ?? 35.0
         screen  = UIScreen.main.bounds
@@ -232,9 +262,14 @@ import RappleProgressHUD
                                     width: screen.width,
                                    height: inputbarHeight + bottomPadding));
         borderView = UIView(frame: CGRect(x: 0,y: 0,width: screen.width,height: 1))
-        borderView.backgroundColor = UIColor(hex: "#eeeeeeff")
+        if color_theme == "light" {
+            borderView.backgroundColor = UIColor(hex: "#eeeeeeff")
+        }else{
+            borderView.backgroundColor = UIColor(hex: "#333333ff")
+        }
         inputbar.addSubview(borderView)
-        inputbar.backgroundColor =  UIColor(hex: arg["bgcolor"] as? String ?? "#f7f7f8ff")
+        print("color_theme = \(color_theme)")
+        inputbar.backgroundColor =  UIColor(hex: color_theme == "dark" ? "#171717ff" : "#f7f7f8ff")
 
 
         var textfield_width = screen.width
@@ -242,6 +277,8 @@ import RappleProgressHUD
         if is_chat {
             textfield_width = screen.width - CGFloat((button_width * 3 + 20 + padding * 3))
             voice_icon = addbutton(command: command, icon: "ib_voice", action: #selector(voiceTap), x: 10)
+            keyboard_icon = addbutton(command: command, icon: "ib_keyboard", action: #selector(keyboardTap), x: 10)
+            keyboard_icon?.isHidden = true
             let posx = Int(screen.width) - (button_width * 2 + 10 + padding)
             let _ = addbutton(command: command,
                       icon: "ib_face",
@@ -252,15 +289,18 @@ import RappleProgressHUD
                                                 y: padding,
                                                 width: Int(textfield_width),
                                                 height: button_width))
-            tf_panel.backgroundColor = UIColor.white
-
             voice_button = MyButton(frame: tf_panel.frame, command: command)
-            voice_button?.backgroundColor = UIColor.white
             voice_button?.layer.cornerRadius = 5
-            voice_button?.setTitle("按住 说话", for: .normal)
-            voice_button?.setTitle("上滑 取消", for: .highlighted)
-            voice_button?.setTitleColor(UIColor.black, for: .normal)
-            voice_button?.setTitleColor(UIColor.red, for: .focused)
+            voice_button?.titleLabel?.font = UIFont.systemFont(ofSize: 14.0)
+            voice_button?.setTitle("按住说话开始录制", for: .normal)
+            if color_theme == "light" {
+                voice_button?.backgroundColor = UIColor(hex: "#eeeeeeff")
+                voice_button?.setTitleColor(UIColor.black, for: .normal)
+            }else{
+                voice_button?.backgroundColor = UIColor(hex: "#333333ff")
+                voice_button?.setTitleColor(UIColor.lightGray, for: .normal)
+            }
+
             voice_button?.titleLabel?.textAlignment = .center
             voice_button?.addTarget(self, action: #selector(record_start), for: .touchDown)
             voice_button?.addTarget(self, action: #selector(record_end), for: .touchUpInside)
@@ -274,7 +314,7 @@ import RappleProgressHUD
                                                     y: 0,
                                                     width: Int(tf_panel.frame.width) - 10,
                                                     height: Int(tf_panel.frame.height)),command: command)
-            initFacePanel(total: 48,command: command)
+            initFacePanel(total: 54,command: command)
             initMorePanel(command:command)
             textfield.returnKeyType = .send
         }else{
@@ -282,7 +322,6 @@ import RappleProgressHUD
                                                 y: padding,
                                                 width: Int(textfield_width) - 20,
                                                 height: button_width))
-            tf_panel.backgroundColor = UIColor.white
             tf_panel.layer.cornerRadius = 5
             inputbar.addSubview(tf_panel)
             textfield = MyUITextField(frame: CGRect(x: 5,
@@ -295,9 +334,19 @@ import RappleProgressHUD
                 textfield.returnKeyType = .send
             }
         }
+        if color_theme == "light" {
+            tf_panel.backgroundColor = UIColor.white
+        }else{
+            tf_panel.backgroundColor = UIColor.init(hex: "#333333ff")
+        }
         textfield.delegate = self
-        textfield.keyboardAppearance = .light
-        textfield.textColor = UIColor.black
+        if color_theme == "light" {
+            textfield.textColor = UIColor.black
+            textfield.backgroundColor = UIColor.white
+        }else{
+            textfield.backgroundColor = UIColor.init(hex: "#333333ff")
+            textfield.textColor = UIColor.white
+        }
         textfield.attributedPlaceholder = NSAttributedString(
             string: arg["placeholder"] as? String ?? "输入聊天内容",
             attributes: [NSAttributedString.Key.foregroundColor: UIColor.gray])
@@ -316,7 +365,7 @@ import RappleProgressHUD
                                              height: self.inputbarHeight + self.bottomPadding)
             }, completion: nil)
         }
-        if !is_chat && is_focus {
+        if is_focus {
             textfield.becomeFirstResponder()
         }
         let json = ["action":"inputbarShow","height": inputbarHeight + bottomPadding ] as [String:Any]
@@ -361,36 +410,43 @@ import RappleProgressHUD
         }
     }
 
-    private func setButtonImage(button:MyButton,image:String){
-        let icon = UIImage(named: image)
-        let tintIcon = icon?.withRenderingMode(.alwaysTemplate)
-        button.setImage(tintIcon, for: .normal)
-    }
+//    private func setButtonImage(button:MyButton,image:String){
+//        let icon = UIImage(named: image)
+//        let tintIcon = icon?.withRenderingMode(.alwaysTemplate)
+//        button.setImage(tintIcon, for: .normal)
+//    }
     private func addbutton(command: CDVInvokedUrlCommand,icon:String,action:Selector,x:Int) -> MyButton{
         let button = MyButton(frame: CGRect(x: x,y: padding, width: button_width, height: button_width),
                               command: command)
-        setButtonImage(button: button, image: icon)
-        button.tintColor = UIColor.black
+        button.setImage(UIImage(named: ("\(icon)_normal")), for: .normal)
+        button.setImage(UIImage(named: ("\(icon)_active")), for: .highlighted)
+//        setButtonImage(button: button, image: icon)
+        if color_theme == "light" {
+            button.tintColor = UIColor.black
+        }else{
+            button.tintColor = UIColor.white
+        }
         button.addTarget(self, action: action, for: .touchUpInside)
         inputbar.addSubview(button)
         return button
     }
     func hideVoice(){
-        setButtonImage(button: voice_icon!, image: "ib_voice")
         tf_panel.isHidden = false
+        voice_icon?.isHidden = false
         voice_button?.isHidden = true
+        keyboard_icon?.isHidden = true
     }
     @objc func voiceTap(_ button:MyButton){
-        if !tf_panel.isHidden {
-            setButtonImage(button: button, image: "ib_keyboard")
-            tf_panel.isHidden = true
-            voice_button?.isHidden = false
-            hidePanel()
-            textfield.resignFirstResponder()
-        }else{
-            hideVoice();
-            textfield.becomeFirstResponder()
-        }
+        voice_button?.isHidden = false
+        voice_icon?.isHidden = true
+        keyboard_icon?.isHidden = false
+        tf_panel.isHidden = true
+        hidePanel()
+        textfield.resignFirstResponder()
+    }
+    @objc func keyboardTap(_ button:MyButton){
+        hideVoice();
+        textfield.becomeFirstResponder()
     }
     func sendAction(action:String){
         if main_command != nil {
@@ -410,6 +466,7 @@ import RappleProgressHUD
     }
 
     func hidePanel(){
+
         if panelShow {
             hideEmoji()
             hideMore()
@@ -441,14 +498,10 @@ import RappleProgressHUD
     func showEmoji(){
         textfield.resignFirstResponder()
         EmojiPanel?.isHidden = false
-        pagenum1?.isHidden = false
-        pagenum2?.isHidden = false
         emojiShow = true
     }
     func hideEmoji(){
         EmojiPanel?.isHidden = true
-        pagenum1?.isHidden = true
-        pagenum2?.isHidden = true
         emojiShow = false
     }
     func showMore(){
@@ -489,14 +542,17 @@ import RappleProgressHUD
     func soundActivatedRecorderDidAbort(_ recorder: FDSoundActivatedRecorder) {
         SwiftSpinner.hide()
         print("soundActivatedRecorderDidAbort")
+        is_recording = false
     }
     func soundActivatedRecorderDidTimeOut(_ recorder: FDSoundActivatedRecorder) {
         print("soundActivatedRecorderDidTimeOut")
+        is_recording = false
     }
     func soundActivatedRecorderDidStartRecording(_ recorder: FDSoundActivatedRecorder) {
         start_time = Date().millisecondsSince1970
         not_delect_sound = false
         SwiftSpinner.shared.titleLabel.text = "正在录音\n00:00"
+        is_recording = true
         print("soundActivatedRecorderDidStartRecording")
     }
     func soundNotDelectSound(_ flag: Bool) {
@@ -533,6 +589,7 @@ import RappleProgressHUD
         else {
             print("conver fail")
         }
+        is_recording = false
         audioRecorder = nil
     }
 
@@ -555,6 +612,7 @@ import RappleProgressHUD
         start_time = 0
         audioRecorder = FDSoundActivatedRecorderMock(command: button.command!)
         audioRecorder?.delegate = self
+        audioRecorder?.microphoneLevel = 0.0
         audioRecorder?.timeoutSeconds = 120.0
         audioRecorder?.intervalCallback = {currentLevel in self.drawSample(currentLevel: currentLevel)}
 
@@ -562,22 +620,34 @@ import RappleProgressHUD
         _ = try? audioSession.setCategory(AVAudioSessionCategoryPlayAndRecord)
         _ = try? audioSession.setActive(true)
         audioRecorder?.startListening()
+
+        SwiftSpinner.showBlurBackground = true
         SwiftSpinner.show("正在检测声音").addTapHandler({}, subtitle: "松开结束，上滑取消")
+        is_recording = true
     }
     @objc func record_end(_ button:MyButton){
         if start_time == 0 {
             audioRecorder?.abort()
             SwiftSpinner.hide()
-            self.viewController.view!.makeToast("未检测到声音，录制取消",position: .center)
+            self.viewController.view!.makeToast("未检测到声音，录制取消",duration: 1.0, position: .center)
+            is_recording = false
             return
         }
         audioRecorder?.stopAndSaveRecording()
         SwiftSpinner.hide()
     }
+
+    func stop_record(){
+        if is_recording {
+            audioRecorder?.abort()
+            is_recording = false
+            self.viewController.view!.makeToast("录制取消",duration: 1.0 ,position: .center)
+            SwiftSpinner.hide()
+        }
+    }
+
     @objc func record_cancel(_ button:MyButton){
-        audioRecorder!.abort()
-        self.viewController.view!.makeToast("录制取消",position: .center)
-        SwiftSpinner.hide()
+        stop_record()
     }
 
     @objc func leftSwipe(){
@@ -642,9 +712,8 @@ import RappleProgressHUD
             let btn = MyButton(frame: CGRect(x: 10.0 + (button_width + 10.0) * count , y: 10.0, width: button_width, height: button_width),command: command,action:item["action"] as! String)
             btn.setImage(UIImage(named: item["icon"] as! String), for: .normal)
             btn.imageEdgeInsets = UIEdgeInsets(top: 10.0, left: 10.0, bottom: 10.0, right: 10.0)
-            btn.setBackgroundImage(UIImage(color: UIColor.lightGray), for: .normal)
-            btn.setBackgroundImage(UIImage(color: UIColor.gray), for: .highlighted)
-            btn.layer.cornerRadius = 8.0
+            btn.setBackgroundImage(UIImage(color: UIColor.white), for: .normal)
+            btn.layer.cornerRadius = 15.0
             btn.layer.masksToBounds = true
             btn.addTarget(self, action: #selector(moreBtnTap), for: .touchUpInside)
             MorePanel.addSubview(btn)
@@ -658,8 +727,9 @@ import RappleProgressHUD
     }
     func initFacePanel(total:Int,command:CDVInvokedUrlCommand){
         //TODO 通过total计算分的页面
+        let totalLine = round(Double(total / 8))
         let imageWidth:Double = (Double(screen.width) - 80.0) / 8.0
-        panelHeight = CGFloat(imageWidth * 3.0 + 28.0)
+        panelHeight = CGFloat(imageWidth * totalLine + 80.0)
         let paddingLeft = 10.0
         EmojiPanel = UIView(frame: CGRect(x: 0.0,
                                               y: Double(inputbarHeight),
@@ -668,46 +738,16 @@ import RappleProgressHUD
         EmojiPanel.isHidden = true
         inputbar.addSubview(EmojiPanel)
 
-        //创建分页指示
-        pagenum1 = UIView(frame: CGRect(x: Double(screen.width/2 - 12), y: Double(inputbarHeight) + (imageWidth + 5) * 3.0 + 2.0 , width: 8.0, height: 8.0))
-        pagenum1.layer.cornerRadius = 4
-        pagenum1.layer.masksToBounds = true
-        pagenum1.backgroundColor = UIColor.darkGray
-        pagenum1.isHidden = true
-        inputbar.addSubview(pagenum1)
-
-        pagenum2 = UIView(frame: CGRect(x: Double(screen.width/2 + 12), y: Double(inputbarHeight) + (imageWidth + 5) * 3.0 + 2.0, width: 8.0, height: 8.0))
-        pagenum2.layer.cornerRadius = 4
-        pagenum2.layer.masksToBounds = true
-        pagenum2.backgroundColor = UIColor.lightGray
-        pagenum2.isHidden = true
-        inputbar.addSubview(pagenum2)
-
-
-        let left = UISwipeGestureRecognizer(target : self, action : #selector(leftSwipe))
-        left.direction = .left
-        EmojiPanel.addGestureRecognizer(left)
-
-        let right = UISwipeGestureRecognizer(target : self, action : #selector(rightSwipe))
-        right.direction = .right
-        EmojiPanel.addGestureRecognizer(right)
-
-
         let BundleDirectory = Bundle.main.bundlePath
         var line = -1
-        var page:Double = 0.0
         for i in 1...total {
             let path = "\(BundleDirectory)\(emoji_prefix!)\(i).png"
             let img = UIImage(contentsOfFile: path)
-            if i % (total/2 + 1) == 0 {
-                line = -1
-                page = Double(screen.width)
-            }
             if (i-1) % 8 == 0 {
                 line += 1
             }
 
-            let imgview = MyButton(frame: CGRect(x: page + paddingLeft + (imageWidth + 10.0) * Double((i-1) % 8),
+            let imgview = MyButton(frame: CGRect(x: paddingLeft + (imageWidth + 9.0) * Double((i-1) % 8),
                                                  y: Double(imageWidth + 5) * Double(line), width: imageWidth, height: imageWidth),command: command)
             imgview.setImage(img, for: .normal)
             imgview.tag = i
